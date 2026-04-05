@@ -29,6 +29,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'image', label: t('nav.image') },
     { id: 'pdf', label: t('nav.pdf') },
+    { id: 'document', label: t('nav.document') },
     { id: 'unit', label: t('nav.unit') },
     { id: 'color', label: t('nav.color') },
   ];

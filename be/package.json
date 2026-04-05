@@ -10,10 +10,19 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "docx-to-pdf-axios": "^1.1.4",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "gm": "^1.25.1",
+    "libreoffice-convert": "^1.8.1",
     "multer": "^1.4.5-lts.1",
     "pdf-lib": "^1.17.1",
+    "pdf-to-png-converter": "^3.14.0",
+    "pdf2img": "^0.5.0",
+    "pdf2pic": "^3.2.0",
     "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "jszip": "^3.10.1"
   }
 }

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import ImageConverter from './components/ImageConverter';
 import PdfConverter from './components/PdfConverter';
+import DocumentConverter from './components/DocumentConverter';
 import UnitConverter from './components/UnitConverter';
 import ColorConverter from './components/ColorConverter';
 import Footer from './components/Footer';
@@ -19,6 +20,8 @@ export default function App() {
         return <ImageConverter />;
       case 'pdf':
         return <PdfConverter />;
+      case 'document':
+        return <DocumentConverter />;
       case 'unit':
         return <UnitConverter />;
       case 'color':

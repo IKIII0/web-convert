@@ -18,6 +18,7 @@ export default function PdfConverter() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [resultUrl, setResultUrl] = useState(null);
+  const [resultType, setResultType] = useState('');
   const [error, setError] = useState('');
   const { t } = useLanguage();
 
@@ -55,12 +56,18 @@ export default function PdfConverter() {
       const formData = new FormData();
       files.forEach((f) => formData.append('files', f));
 
-      const endpoint = mode === 'images-to-pdf' ? '/pdf/from-images' : '/pdf/merge';
+      let endpoint = '';
+      if (mode === 'images-to-pdf') endpoint = '/pdf/from-images';
+      else if (mode === 'merge') endpoint = '/pdf/merge';
+      else if (mode === 'pdf-to-images') endpoint = '/pdf/to-images';
+
       const response = await axios.post(`${API}${endpoint}`, formData, {
         responseType: 'blob',
       });
 
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const type = response.data.type || response.headers['content-type'] || 'application/pdf';
+      const blob = new Blob([response.data], { type });
+      setResultType(type);
       setResultUrl(URL.createObjectURL(blob));
     } catch (err) {
       setError(t('pdfConv.errorProcess'));
@@ -73,13 +80,16 @@ export default function PdfConverter() {
     if (!resultUrl) return;
     const link = document.createElement('a');
     link.href = resultUrl;
-    link.download = mode === 'images-to-pdf' ? 'converted.pdf' : 'merged.pdf';
+    link.download = mode === 'images-to-pdf' ? 'converted.pdf' 
+                  : mode === 'merge' ? 'merged.pdf' 
+                  : (resultType === 'image/png' ? 'converted-page.png' : 'converted-images.zip');
     link.click();
   };
 
   const handleReset = () => {
     setFiles([]);
     setResultUrl(null);
+    setResultType('');
     setError('');
   };
 
@@ -119,13 +129,20 @@ export default function PdfConverter() {
 
       <div className="glass-card" style={{ padding: 'clamp(1.5rem, 3vw, 2rem)' }}>
         {/* Mode selector */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: '#F3F4F6', padding: '0.375rem', borderRadius: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: '#F3F4F6', padding: '0.375rem', borderRadius: '0.75rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => { setMode('images-to-pdf'); handleReset(); }}
             style={modeButtonStyle(mode === 'images-to-pdf')}
           >
             <HiOutlinePhotograph style={{ width: '1rem', height: '1rem' }} />
             {t('pdfConv.imagesToPdf')}
+          </button>
+          <button
+            onClick={() => { setMode('pdf-to-images'); handleReset(); }}
+            style={modeButtonStyle(mode === 'pdf-to-images')}
+          >
+            <HiOutlineDocumentText style={{ width: '1rem', height: '1rem' }} />
+            {t('pdfConv.pdfToImages')}
           </button>
           <button
             onClick={() => { setMode('merge'); handleReset(); }}
@@ -160,7 +177,9 @@ export default function PdfConverter() {
           <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#9CA3AF' }}>
             {mode === 'images-to-pdf'
               ? t('pdfConv.supportsImages')
-              : t('pdfConv.selectPdfs')}
+              : mode === 'merge'
+                ? t('pdfConv.selectPdfs')
+                : t('pdfConv.supportsPdfs')}
           </p>
         </div>
 
@@ -235,7 +254,9 @@ export default function PdfConverter() {
                 ) : (
                   <>
                     <HiOutlineRefresh style={{ width: '1.25rem', height: '1.25rem' }} />
-                    {mode === 'images-to-pdf' ? t('pdfConv.convertToPdf') : t('pdfConv.mergePdfs')}
+                    {mode === 'images-to-pdf' ? t('pdfConv.convertToPdf') 
+                      : mode === 'merge' ? t('pdfConv.mergePdfs')
+                      : t('pdfConv.convertToImages')}
                   </>
                 )}
               </button>
@@ -247,7 +268,7 @@ export default function PdfConverter() {
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', borderRadius: '0.75rem', fontSize: '1.05rem' }}
                 >
                   <HiOutlineDownload style={{ width: '1.25rem', height: '1.25rem' }} />
-                  {t('pdfConv.downloadPdf')}
+                  {mode === 'pdf-to-images' ? t('pdfConv.downloadImages') : t('pdfConv.downloadPdf')}
                 </button>
                 <button
                   onClick={handleReset}

@@ -7,6 +7,8 @@ import {
   convertColorHandler,
   imagesToPdf,
   mergePdfs,
+  pdfToImages,
+  officeToPdf,
 } from '../controllers/convertController.js';
 
 const router = Router();
@@ -30,5 +32,7 @@ router.post('/color', convertColorHandler);
 // PDF operations
 router.post('/pdf/from-images', upload.array('files', 20), imagesToPdf);
 router.post('/pdf/merge', upload.array('files', 20), mergePdfs);
+router.post('/pdf/to-images', upload.array('files', 20), pdfToImages);
+router.post('/pdf/from-office', upload.single('file'), officeToPdf);
 
 export default router;

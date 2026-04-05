@@ -4,6 +4,7 @@ const translations = {
     nav: {
       image: 'Image',
       pdf: 'PDF',
+      document: 'Document',
       unit: 'Unit',
       color: 'Color',
     },
@@ -54,22 +55,41 @@ const translations = {
     // PDF Converter
     pdfConv: {
       title: 'PDF Tools',
-      subtitle: 'Convert images to PDF or merge multiple PDFs',
+      subtitle: 'Convert images to PDF, PDF to images, or merge multiple PDFs',
       imagesToPdf: 'Images to PDF',
+      pdfToImages: 'PDF to Images',
       mergePdfs: 'Merge PDFs',
       dropActive: 'Drop files here...',
       dropImages: 'Drop images here or click to browse',
       dropPdfs: 'Drop PDF files here or click to browse',
       supportsImages: 'Supports PNG, JPG, WebP and more',
+      supportsPdfs: 'Supports PDF files • Max 50MB',
       selectPdfs: 'Select 2 or more PDF files to merge',
       filesSelected: 'file(s) selected',
       clearAll: 'Clear all',
       processing: 'Processing...',
       convertToPdf: 'Convert to PDF',
+      convertToImages: 'Convert to Images',
       downloadPdf: 'Download PDF',
+      downloadImages: 'Download Output',
       new: 'New',
       errorProcess: 'Failed to process files. Please try again.',
       errorMinFiles: 'Please add at least 2 PDF files to merge',
+    },
+
+    // Document Converter
+    docConv: {
+      title: 'Document Tools',
+      subtitle: 'Convert Word, PowerPoint, and Excel documents to PDF',
+      dropActive: 'Drop document here...',
+      dropDefault: 'Drag & drop your document here',
+      clickBrowse: 'or click to browse files',
+      supports: 'Supports DOC, DOCX, PPT, PPTX, XLS, XLSX • Max 50MB',
+      converting: 'Converting...',
+      convertToPdf: 'Convert to PDF',
+      downloadPdf: 'Download PDF',
+      new: 'New',
+      errorConvert: 'Failed to convert document. Please ensure it is a valid format and try again.',
     },
 
     // Unit Converter
@@ -138,6 +158,7 @@ const translations = {
     nav: {
       image: 'Gambar',
       pdf: 'PDF',
+      document: 'Dokumen',
       unit: 'Satuan',
       color: 'Warna',
     },
@@ -188,22 +209,41 @@ const translations = {
     // PDF Converter
     pdfConv: {
       title: 'Alat PDF',
-      subtitle: 'Konversi gambar ke PDF atau gabung beberapa PDF',
+      subtitle: 'Konversi gambar ke PDF, PDF ke gambar, atau gabung beberapa PDF',
       imagesToPdf: 'Gambar ke PDF',
+      pdfToImages: 'PDF ke Gambar',
       mergePdfs: 'Gabung PDF',
       dropActive: 'Lepaskan file di sini...',
       dropImages: 'Lepas gambar di sini atau klik untuk pilih',
       dropPdfs: 'Lepas file PDF di sini atau klik untuk pilih',
       supportsImages: 'Mendukung PNG, JPG, WebP dan lainnya',
+      supportsPdfs: 'Mendukung file PDF • Maks 50MB',
       selectPdfs: 'Pilih 2 atau lebih file PDF untuk digabung',
       filesSelected: 'file terpilih',
       clearAll: 'Hapus semua',
       processing: 'Memproses...',
       convertToPdf: 'Konversi ke PDF',
+      convertToImages: 'Konversi ke Gambar',
       downloadPdf: 'Unduh PDF',
+      downloadImages: 'Unduh Hasil',
       new: 'Baru',
       errorProcess: 'Gagal memproses file. Silakan coba lagi.',
       errorMinFiles: 'Tambahkan minimal 2 file PDF untuk digabung',
+    },
+
+    // Document Converter
+    docConv: {
+      title: 'Alat Dokumen',
+      subtitle: 'Konversi dokumen Word, PowerPoint, dan Excel ke PDF',
+      dropActive: 'Lepaskan dokumen di sini...',
+      dropDefault: 'Seret & lepas dokumen di sini',
+      clickBrowse: 'atau klik untuk pilih file',
+      supports: 'Mendukung DOC, DOCX, PPT, PPTX, XLS, XLSX • Maks 50MB',
+      converting: 'Mengonversi...',
+      convertToPdf: 'Konversi ke PDF',
+      downloadPdf: 'Unduh PDF',
+      new: 'Baru',
+      errorConvert: 'Gagal mengonversi dokumen. Pastikan format valid dan coba lagi.',
     },
 
     // Unit Converter
