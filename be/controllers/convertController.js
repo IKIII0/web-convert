@@ -3,17 +3,12 @@ import { PDFDocument } from 'pdf-lib';
 import { pdfToPng } from 'pdf-to-png-converter';
 import JSZip from 'jszip';
 import fs from 'fs/promises';
-import fsSync from 'fs';
 import path from 'path';
-import os from 'os';
-import { execFile } from 'child_process';
-import util from 'util';
+import axios from 'axios';
+import FormData from 'form-data';
 import { convertUnit, getCategories, getUnits } from '../utils/unitConverter.js';
 import { convertColor } from '../utils/colorConverter.js';
 
-const execFileAsync = util.promisify(execFile);
-
-// Image conversion controller
 export async function convertImage(req, res) {
   try {
     if (!req.file) {
@@ -248,61 +243,60 @@ export async function officeToPdf(req, res) {
       return res.status(400).json({ error: 'No document file uploaded' });
     }
 
-    const libreOfficePath = process.platform === 'win32'
-      ? 'C:\\Program Files\\LibreOffice\\program\\soffice.exe'
-      : 'soffice';
+    const originalName = req.file.originalname;
 
-    // Verify libreoffice exists on windows
-    if (process.platform === 'win32' && !fsSync.existsSync(libreOfficePath)) {
-      throw new Error('LibreOffice is not installed at the default path');
-    }
-
-    const tempDir = os.tmpdir();
-    const sessionId = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    // 1. Upload file to PDF24
+    const formData = new FormData();
+    formData.append('file', req.file.buffer, { filename: originalName });
     
-    // original name vs temp
-    let originalExt = path.extname(req.file.originalname) || '.docx';
-    const inputFilePath = path.join(tempDir, `input_${sessionId}${originalExt}`);
-    const outputFileName = `input_${sessionId}.pdf`;
-    const outputFilePath = path.join(tempDir, outputFileName);
+    let options = { responseType: 'json', headers: formData.getHeaders() };
+    const uploadRes = await axios.post('https://filetools2.pdf24.org/client.php?action=upload', formData, options);
+    const files = uploadRes.data;
 
-    // Write the buffer to temp file
-    await fs.writeFile(inputFilePath, req.file.buffer);
-
-    try {
-      // Execute local libreoffice commands directly
-      await execFileAsync(libreOfficePath, [
-        '--headless',
-        '--convert-to', 'pdf',
-        '--outdir', tempDir,
-        inputFilePath
-      ]);
-
-      // Verify the PDF was made
-      const pdfBuffer = await fs.readFile(outputFilePath);
-
-      const baseName = path.parse(req.file.originalname).name;
-      const finalFilename = `${baseName}.pdf`;
-
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${finalFilename}"`,
-        'Content-Length': pdfBuffer.length,
-      });
-
-      res.send(pdfBuffer);
-    } finally {
-      // Cleanup files quietly
-      try {
-        if (fsSync.existsSync(inputFilePath)) await fs.unlink(inputFilePath);
-        if (fsSync.existsSync(outputFilePath)) await fs.unlink(outputFilePath);
-      } catch (cleanErr) {
-        console.error('Cleanup error:', cleanErr);
-      }
+    if (!files || files.length === 0) {
+      throw new Error('Upload to conversion service failed');
     }
+
+    // 2. Start conversion job
+    delete options.headers;
+    const convertData = (await axios.post('https://filetools2.pdf24.org/client.php?action=convertToPdf', { files }, options)).data;
+    options.params = convertData;
+
+    // 3. Poll for status
+    let jobStatusData = (await axios.get('https://filetools2.pdf24.org/client.php?action=getStatus', options)).data;
+    
+    let attempts = 0;
+    while (jobStatusData.status !== 'done' && attempts < 30) { 
+      // max 1 minute wait
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      jobStatusData = (await axios.get('https://filetools2.pdf24.org/client.php?action=getStatus', options)).data;
+      if (jobStatusData.status === 'error') {
+         throw new Error('Service returned an error during conversion');
+      }
+      attempts++;
+    }
+
+    if (jobStatusData.status !== 'done') {
+      throw new Error('Conversion timeout');
+    }
+
+    // 4. Download result
+    options.responseType = 'arraybuffer';
+    const finalPdf = (await axios.get('https://filetools2.pdf24.org/client.php?mode=download&action=downloadJobResult', options)).data;
+
+    const baseName = path.parse(originalName).name;
+    const finalFilename = `${baseName}.pdf`;
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${finalFilename}"`,
+      'Content-Length': finalPdf.length,
+    });
+
+    res.send(finalPdf);
   } catch (error) {
-    console.error('Office to PDF error:', error);
-    res.status(500).json({ error: 'Failed to convert document. Make sure LibreOffice is installed.' });
+    console.error('Office to PDF API error:', error);
+    res.status(500).json({ error: 'Failed to convert document. Service might be temporarily unavailable.' });
   }
 }
 
