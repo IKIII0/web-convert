@@ -54,13 +54,6 @@ export default function Hero({ setActiveTab }) {
 
   return (
     <section className="hero-gradient" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 4rem' }}>
-      {/* Badge */}
-      <div className="animate-fade-in-up" style={{ animationDelay: '0.1s', opacity: 0, marginBottom: '1.5rem' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 1rem', borderRadius: '9999px', background: '#FFF7ED', color: '#C2410C', fontSize: '0.875rem', fontWeight: 600 }}>
-          {t('hero.badge')}
-        </span>
-      </div>
-
       {/* Title */}
       <h1 className="animate-fade-in-up" style={{ animationDelay: '0.2s', opacity: 0, fontSize: 'clamp(2.25rem, 5vw, 4.5rem)', fontWeight: 900, textAlign: 'center', maxWidth: '56rem', lineHeight: 1.1, color: '#1F2937' }}>
         {t('hero.titleConvert')}{' '}

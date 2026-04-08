@@ -13,7 +13,7 @@ const translations = {
 
     // Hero
     hero: {
-      badge: 'All-in-One Converter Tool',
+      badge: 'Free Online Converter Tool',
       titleConvert: 'Convert',
       titleEverything: 'Everything',
       titleInOnePlace: 'in One Place',
@@ -200,7 +200,7 @@ const translations = {
 
     // Hero
     hero: {
-      badge: 'Alat Konversi Lengkap',
+      badge: 'Alat Konversi Online Gratis',
       titleConvert: 'Konversi',
       titleEverything: 'Segalanya',
       titleInOnePlace: 'di Satu Tempat',
