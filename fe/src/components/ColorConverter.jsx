@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
 import { HiOutlineColorSwatch, HiOutlineClipboardCopy, HiOutlineCheck } from 'react-icons/hi';
 import { useLanguage } from '../LanguageContext';
+import ConverterLayout from './ui/ConverterLayout';
+import TabSelector from './ui/TabSelector';
 
+// Color math helpers
 function hexToRgb(hex) {
   hex = hex.replace(/^#/, '');
   if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
   if (!/^[0-9A-Fa-f]{6}$/.test(hex)) return null;
-  const num = parseInt(hex, 16);
-  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  const n = parseInt(hex, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 function rgbToHex(r, g, b) {
   return '#' + [r, g, b].map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('');
@@ -15,8 +18,9 @@ function rgbToHex(r, g, b) {
 function rgbToHsl(r, g, b) {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s; const l = (max + min) / 2;
-  if (max === min) { h = s = 0; } else {
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
@@ -29,138 +33,261 @@ function rgbToHsl(r, g, b) {
 }
 function hslToRgb(h, s, l) {
   h /= 360; s /= 100; l /= 100;
-  let r, g, b;
-  if (s === 0) { r = g = b = l; } else {
-    const hue2rgb = (p, q, t) => {
-      if (t < 0) t += 1; if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q-p)*6*t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q-p)*(2/3-t)*6;
-      return p;
-    };
-    const q = l < 0.5 ? l*(1+s) : l+s-l*s; const p = 2*l-q;
-    r = hue2rgb(p,q,h+1/3); g = hue2rgb(p,q,h); b = hue2rgb(p,q,h-1/3);
-  }
-  return { r: Math.round(r*255), g: Math.round(g*255), b: Math.round(b*255) };
+  if (s === 0) { const v = Math.round(l * 255); return { r: v, g: v, b: v }; }
+  const hue2rgb = (p, q, t) => {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return { r: Math.round(hue2rgb(p, q, h + 1/3) * 255), g: Math.round(hue2rgb(p, q, h) * 255), b: Math.round(hue2rgb(p, q, h - 1/3) * 255) };
+}
+function rgbToCmyk(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const k = 1 - Math.max(r, g, b);
+  if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
+  return { c: Math.round((1 - r - k) / (1 - k) * 100), m: Math.round((1 - g - k) / (1 - k) * 100), y: Math.round((1 - b - k) / (1 - k) * 100), k: Math.round(k * 100) };
+}
+
+const QUICK_COLORS = [
+  '#F97316','#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6',
+  '#EC4899','#06B6D4','#84CC16','#1F2937','#6B7280','#FFFFFF',
+];
+
+const TABS = [
+  { id: 'hex', label: 'HEX' },
+  { id: 'rgb', label: 'RGB' },
+  { id: 'hsl', label: 'HSL' },
+];
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy"
+      style={{ padding: '0.375rem', borderRadius: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer', color: copied ? '#10B981' : '#9CA3AF', transition: 'all 0.2s ease' }}
+    >
+      {copied
+        ? <HiOutlineCheck style={{ width: '1rem', height: '1rem' }} />
+        : <HiOutlineClipboardCopy style={{ width: '1rem', height: '1rem' }} />
+      }
+    </button>
+  );
+}
+
+function ResultRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: '#FFF7ED', border: '1px solid #FFEDD5' }}>
+      <div>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.2rem' }}>{label}</span>
+        <span style={{ fontSize: '1rem', fontFamily: 'monospace', fontWeight: 700, color: '#1F2937' }}>{value}</span>
+      </div>
+      <CopyButton text={value} />
+    </div>
+  );
 }
 
 export default function ColorConverter() {
   const [mode, setMode] = useState('hex');
-  const [hexInput, setHexInput] = useState('#F97316');
-  const [rgbInput, setRgbInput] = useState({ r: 249, g: 115, b: 22 });
-  const [hslInput, setHslInput] = useState({ h: 25, s: 95, l: 53 });
-  const [copied, setCopied] = useState('');
+  const [hex, setHex] = useState('#F97316');
+  const [rgb, setRgb] = useState({ r: 249, g: 115, b: 22 });
+  const [hsl, setHsl] = useState({ h: 25, s: 95, l: 53 });
   const { t } = useLanguage();
 
+  const syncFromHex = (v) => {
+    setHex(v);
+    const r = hexToRgb(v);
+    if (r) { setRgb(r); setHsl(rgbToHsl(r.r, r.g, r.b)); }
+  };
+  const syncFromRgb = (newRgb) => {
+    setRgb(newRgb);
+    setHex(rgbToHex(newRgb.r, newRgb.g, newRgb.b));
+    setHsl(rgbToHsl(newRgb.r, newRgb.g, newRgb.b));
+  };
+  const syncFromHsl = (newHsl) => {
+    setHsl(newHsl);
+    const r = hslToRgb(newHsl.h, newHsl.s, newHsl.l);
+    setRgb(r);
+    setHex(rgbToHex(r.r, r.g, r.b));
+  };
+
   const colors = useMemo(() => {
-    let rgb;
-    try {
-      switch (mode) {
-        case 'hex': rgb = hexToRgb(hexInput); break;
-        case 'rgb': rgb = { ...rgbInput }; break;
-        case 'hsl': rgb = hslToRgb(hslInput.h, hslInput.s, hslInput.l); break;
-      }
-    } catch { rgb = null; }
-    if (!rgb) return null;
-    return { hex: rgbToHex(rgb.r, rgb.g, rgb.b), rgb, hsl: rgbToHsl(rgb.r, rgb.g, rgb.b) };
-  }, [mode, hexInput, rgbInput, hslInput]);
+    const r = hexToRgb(hex);
+    if (!r) return null;
+    const h = rgbToHsl(r.r, r.g, r.b);
+    const cmyk = rgbToCmyk(r.r, r.g, r.b);
+    return {
+      hex: rgbToHex(r.r, r.g, r.b).toUpperCase(),
+      rgb: `rgb(${r.r}, ${r.g}, ${r.b})`,
+      hsl: `hsl(${h.h}, ${h.s}%, ${h.l}%)`,
+      cmyk: `cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`,
+      css: `rgba(${r.r}, ${r.g}, ${r.b}, 1)`,
+    };
+  }, [hex]);
 
-  const copyToClipboard = (text, label) => { navigator.clipboard.writeText(text); setCopied(label); setTimeout(() => setCopied(''), 2000); };
+  const previewColor = colors?.hex || '#cccccc';
 
-  const CopyBtn = ({ text, label }) => (
-    <button onClick={() => copyToClipboard(text, label)} style={{ marginLeft: '0.5rem', padding: '0.375rem', borderRadius: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9CA3AF', transition: 'all 0.2s ease' }} title="Copy">
-      {copied === label ? <HiOutlineCheck style={{ width: '1rem', height: '1rem', color: '#10B981' }} /> : <HiOutlineClipboardCopy style={{ width: '1rem', height: '1rem' }} />}
-    </button>
-  );
-
-  const previewColor = colors ? colors.hex : '#cccccc';
-  const quickColors = ['#F97316','#EF4444','#8B5CF6','#3B82F6','#10B981','#F59E0B','#EC4899','#1F2937','#FFFFFF'];
-
-  const hslFields = [
-    { key: 'h', label: t('colorConv.hue'), max: 360 },
-    { key: 's', label: t('colorConv.saturation'), max: 100 },
-    { key: 'l', label: t('colorConv.lightness'), max: 100 },
-  ];
-
-  const rgbLabels = { r: t('colorConv.red'), g: t('colorConv.green'), b: t('colorConv.blue') };
+  // Determine if color is light or dark for text contrast
+  const rgbVals = hexToRgb(previewColor);
+  const luminance = rgbVals ? (0.299 * rgbVals.r + 0.587 * rgbVals.g + 0.114 * rgbVals.b) / 255 : 0.5;
+  const textOnColor = luminance > 0.5 ? '#1F2937' : 'white';
 
   return (
-    <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '4rem', height: '4rem', borderRadius: '1rem', background: 'linear-gradient(135deg, #FFF7ED, #FFEDD5)', color: '#F97316', marginBottom: '1rem' }}>
-          <HiOutlineColorSwatch style={{ width: '2rem', height: '2rem' }} />
+    <ConverterLayout
+      icon={<HiOutlineColorSwatch style={{ width: '2rem', height: '2rem', color: '#F97316' }} />}
+      title={t('colorConv.title')}
+      subtitle={t('colorConv.subtitle')}
+    >
+      {/* Color preview + quick colors */}
+      <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+        {/* Big preview swatch */}
+        <div style={{
+          width: '9rem', height: '9rem', borderRadius: '1.25rem',
+          background: previewColor,
+          boxShadow: `0 8px 30px ${previewColor}60`,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, transition: 'all 0.3s ease',
+        }}>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: textOnColor, opacity: 0.8 }}>{previewColor}</span>
         </div>
-        <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 900, color: '#1F2937' }}>{t('colorConv.title')}</h2>
-        <p style={{ marginTop: '0.75rem', color: '#6B7280', fontSize: '1.1rem' }}>{t('colorConv.subtitle')}</p>
+
+        {/* Quick colors */}
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+            {t('colorConv.quickColors')}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {QUICK_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => syncFromHex(c)}
+                title={c}
+                style={{
+                  width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem',
+                  background: c, cursor: 'pointer', transition: 'transform 0.15s ease',
+                  border: hex.toUpperCase() === c.toUpperCase() ? '3px solid #F97316' : '2px solid white',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="glass-card" style={{ padding: 'clamp(1.5rem, 3vw, 2rem)' }}>
-        <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{ width: '10rem', height: '8rem', borderRadius: '1rem', border: '2px solid white', transition: 'all 0.3s ease', backgroundColor: previewColor, boxShadow: `0 8px 30px ${previewColor}40, inset 0 2px 4px rgba(0,0,0,0.06)`, flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{t('colorConv.quickColors')}</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {quickColors.map((c) => (
-                <button key={c} onClick={() => { setMode('hex'); setHexInput(c); const rgb = hexToRgb(c); if (rgb) { setRgbInput(rgb); setHslInput(rgbToHsl(rgb.r, rgb.g, rgb.b)); } }} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.75rem', border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.2s ease', backgroundColor: c }} title={c} />
+
+      {/* Mode tabs */}
+      <TabSelector tabs={TABS} active={mode} onChange={setMode} />
+
+      {/* Input section */}
+      <div style={{ marginBottom: '1.75rem' }}>
+        {mode === 'hex' && (
+          <div className="animate-fade-in">
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.625rem' }}>
+              {t('colorConv.hexColor')}
+            </label>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={hex.length === 7 && hex.startsWith('#') ? hex : '#000000'}
+                onChange={(e) => syncFromHex(e.target.value)}
+                style={{ width: '3.5rem', height: '3.5rem', borderRadius: '0.75rem', border: '2px solid #E5E7EB', cursor: 'pointer', padding: 0 }}
+              />
+              <input
+                type="text"
+                value={hex}
+                onChange={(e) => syncFromHex(e.target.value)}
+                className="input-field"
+                placeholder="#F97316"
+                style={{ flex: 1, fontSize: '1.25rem', fontFamily: 'monospace', fontWeight: 700 }}
+              />
+            </div>
+          </div>
+        )}
+
+        {mode === 'rgb' && (
+          <div className="animate-fade-in">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+              {[
+                { key: 'r', label: t('colorConv.red'), color: '#EF4444' },
+                { key: 'g', label: t('colorConv.green'), color: '#10B981' },
+                { key: 'b', label: t('colorConv.blue'), color: '#3B82F6' },
+              ].map(({ key, label, color }) => (
+                <div key={key}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color, marginBottom: '0.5rem' }}>{label}</label>
+                  <input
+                    type="number" min="0" max="255"
+                    value={rgb[key]}
+                    onChange={(e) => syncFromRgb({ ...rgb, [key]: Math.max(0, Math.min(255, parseInt(e.target.value) || 0)) })}
+                    className="input-field"
+                    style={{ fontSize: '1.1rem', fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }}
+                  />
+                  <input
+                    type="range" min="0" max="255"
+                    value={rgb[key]}
+                    onChange={(e) => syncFromRgb({ ...rgb, [key]: parseInt(e.target.value) })}
+                    style={{ width: '100%', marginTop: '0.5rem', accentColor: color }}
+                  />
+                </div>
               ))}
             </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#F3F4F6', padding: '0.375rem', borderRadius: '0.75rem' }}>
-          {['hex','rgb','hsl'].map((m) => (
-            <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: '0.625rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, transition: 'all 0.2s ease', border: 'none', cursor: 'pointer', background: mode === m ? 'linear-gradient(135deg, #F97316, #EA580C)' : 'transparent', color: mode === m ? 'white' : '#6B7280', boxShadow: mode === m ? '0 4px 12px rgba(249, 115, 22, 0.25)' : 'none' }}>{m.toUpperCase()}</button>
-          ))}
-        </div>
-        <div style={{ marginBottom: '2rem' }}>
-          {mode === 'hex' && (
-            <div className="animate-fade-in">
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>{t('colorConv.hexColor')}</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <input type="color" value={hexInput.startsWith('#') && hexInput.length === 7 ? hexInput : '#000000'} onChange={(e) => { const v = e.target.value; setHexInput(v); const rgb = hexToRgb(v); if (rgb) { setRgbInput(rgb); setHslInput(rgbToHsl(rgb.r, rgb.g, rgb.b)); } }} style={{ width: '3.5rem', height: '3.5rem', borderRadius: '0.75rem', border: '2px solid #E5E7EB', cursor: 'pointer', padding: 0 }} />
-                <input type="text" value={hexInput} onChange={(e) => { const v = e.target.value; setHexInput(v); const rgb = hexToRgb(v); if (rgb) { setRgbInput(rgb); setHslInput(rgbToHsl(rgb.r, rgb.g, rgb.b)); } }} className="input-field" placeholder="#F97316" style={{ fontSize: '1.25rem', fontFamily: 'monospace', fontWeight: 700, flex: 1 }} />
-              </div>
-            </div>
-          )}
-          {mode === 'rgb' && (
-            <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-              {['r','g','b'].map((ch) => (
-                <div key={ch}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>{rgbLabels[ch]}</label>
-                  <input type="number" min="0" max="255" value={rgbInput[ch]} onChange={(e) => { const val = Math.max(0, Math.min(255, parseInt(e.target.value) || 0)); const newRgb = { ...rgbInput, [ch]: val }; setRgbInput(newRgb); setHexInput(rgbToHex(newRgb.r, newRgb.g, newRgb.b)); setHslInput(rgbToHsl(newRgb.r, newRgb.g, newRgb.b)); }} className="input-field" style={{ fontSize: '1.125rem', fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
-                  <input type="range" min="0" max="255" value={rgbInput[ch]} onChange={(e) => { const val = parseInt(e.target.value); const newRgb = { ...rgbInput, [ch]: val }; setRgbInput(newRgb); setHexInput(rgbToHex(newRgb.r, newRgb.g, newRgb.b)); setHslInput(rgbToHsl(newRgb.r, newRgb.g, newRgb.b)); }} style={{ width: '100%', marginTop: '0.5rem', accentColor: '#F97316' }} />
-                </div>
-              ))}
-            </div>
-          )}
-          {mode === 'hsl' && (
-            <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-              {hslFields.map(({ key, label, max }) => (
+        )}
+
+        {mode === 'hsl' && (
+          <div className="animate-fade-in">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+              {[
+                { key: 'h', label: t('colorConv.hue'), max: 360, color: '#F97316' },
+                { key: 's', label: t('colorConv.saturation'), max: 100, color: '#8B5CF6' },
+                { key: 'l', label: t('colorConv.lightness'), max: 100, color: '#06B6D4' },
+              ].map(({ key, label, max, color }) => (
                 <div key={key}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>{label}</label>
-                  <input type="number" min="0" max={max} value={hslInput[key]} onChange={(e) => { const val = Math.max(0, Math.min(max, parseInt(e.target.value) || 0)); const newHsl = { ...hslInput, [key]: val }; setHslInput(newHsl); const rgb = hslToRgb(newHsl.h, newHsl.s, newHsl.l); setRgbInput(rgb); setHexInput(rgbToHex(rgb.r, rgb.g, rgb.b)); }} className="input-field" style={{ fontSize: '1.125rem', fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
-                  <input type="range" min="0" max={max} value={hslInput[key]} onChange={(e) => { const val = parseInt(e.target.value); const newHsl = { ...hslInput, [key]: val }; setHslInput(newHsl); const rgb = hslToRgb(newHsl.h, newHsl.s, newHsl.l); setRgbInput(rgb); setHexInput(rgbToHex(rgb.r, rgb.g, rgb.b)); }} style={{ width: '100%', marginTop: '0.5rem', accentColor: '#F97316' }} />
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color, marginBottom: '0.5rem' }}>{label}</label>
+                  <input
+                    type="number" min="0" max={max}
+                    value={hsl[key]}
+                    onChange={(e) => syncFromHsl({ ...hsl, [key]: Math.max(0, Math.min(max, parseInt(e.target.value) || 0)) })}
+                    className="input-field"
+                    style={{ fontSize: '1.1rem', fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }}
+                  />
+                  <input
+                    type="range" min="0" max={max}
+                    value={hsl[key]}
+                    onChange={(e) => syncFromHsl({ ...hsl, [key]: parseInt(e.target.value) })}
+                    style={{ width: '100%', marginTop: '0.5rem', accentColor: color }}
+                  />
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-        {colors && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('colorConv.convertedValues')}</h3>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: '0.75rem', background: '#FFF7ED', border: '1px solid #FFEDD5' }}>
-              <div><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280' }}>HEX</span><p style={{ fontSize: '1.125rem', fontFamily: 'monospace', fontWeight: 700, color: '#1F2937' }}>{colors.hex.toUpperCase()}</p></div>
-              <CopyBtn text={colors.hex.toUpperCase()} label="hex" />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: '0.75rem', background: '#FFF7ED', border: '1px solid #FFEDD5' }}>
-              <div><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280' }}>RGB</span><p style={{ fontSize: '1.125rem', fontFamily: 'monospace', fontWeight: 700, color: '#1F2937' }}>rgb({colors.rgb.r}, {colors.rgb.g}, {colors.rgb.b})</p></div>
-              <CopyBtn text={`rgb(${colors.rgb.r}, ${colors.rgb.g}, ${colors.rgb.b})`} label="rgb" />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: '0.75rem', background: '#FFF7ED', border: '1px solid #FFEDD5' }}>
-              <div><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280' }}>HSL</span><p style={{ fontSize: '1.125rem', fontFamily: 'monospace', fontWeight: 700, color: '#1F2937' }}>hsl({colors.hsl.h}, {colors.hsl.s}%, {colors.hsl.l}%)</p></div>
-              <CopyBtn text={`hsl(${colors.hsl.h}, ${colors.hsl.s}%, ${colors.hsl.l}%)`} label="hsl" />
             </div>
           </div>
         )}
       </div>
-    </div>
+
+      {/* All converted values */}
+      {colors && (
+        <div className="animate-fade-in">
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+            {t('colorConv.convertedValues')}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <ResultRow label="HEX" value={colors.hex} />
+            <ResultRow label="RGB" value={colors.rgb} />
+            <ResultRow label="HSL" value={colors.hsl} />
+            <ResultRow label="CMYK" value={colors.cmyk} />
+            <ResultRow label="CSS rgba" value={colors.css} />
+          </div>
+        </div>
+      )}
+    </ConverterLayout>
   );
 }

@@ -9,6 +9,8 @@ import {
   mergePdfs,
   pdfToImages,
   officeToPdf,
+  convertAudio,
+  convertVideo,
 } from '../controllers/convertController.js';
 
 const router = Router();
@@ -16,7 +18,7 @@ const router = Router();
 // Multer config — store files in memory
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for video
 });
 
 // Image conversion
@@ -34,5 +36,11 @@ router.post('/pdf/from-images', upload.array('files', 20), imagesToPdf);
 router.post('/pdf/merge', upload.array('files', 20), mergePdfs);
 router.post('/pdf/to-images', upload.array('files', 20), pdfToImages);
 router.post('/pdf/from-office', upload.single('file'), officeToPdf);
+
+// Audio conversion
+router.post('/audio', upload.single('file'), convertAudio);
+
+// Video conversion
+router.post('/video', upload.single('file'), convertVideo);
 
 export default router;

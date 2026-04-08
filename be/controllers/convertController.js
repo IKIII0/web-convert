@@ -3,9 +3,12 @@ import { PDFDocument } from 'pdf-lib';
 import { pdfToPng } from 'pdf-to-png-converter';
 import JSZip from 'jszip';
 import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
 import path from 'path';
+import os from 'os';
 import axios from 'axios';
 import FormData from 'form-data';
+import ffmpeg from 'fluent-ffmpeg';
 import { convertUnit, getCategories, getUnits } from '../utils/unitConverter.js';
 import { convertColor } from '../utils/colorConverter.js';
 
@@ -301,3 +304,117 @@ export async function officeToPdf(req, res) {
 }
 
 
+
+// Audio conversion
+export async function convertAudio(req, res) {
+  let inputPath = null;
+  let outputPath = null;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file uploaded' });
+    }
+
+    const { format } = req.body;
+    const allowedFormats = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
+
+    if (!format || !allowedFormats.includes(format.toLowerCase())) {
+      return res.status(400).json({ error: `Invalid format. Allowed: ${allowedFormats.join(', ')}` });
+    }
+
+    const tmpDir = os.tmpdir();
+    const ext = path.extname(req.file.originalname) || '.audio';
+    inputPath = path.join(tmpDir, `audio_in_${Date.now()}${ext}`);
+    outputPath = path.join(tmpDir, `audio_out_${Date.now()}.${format.toLowerCase()}`);
+
+    await fs.writeFile(inputPath, req.file.buffer);
+
+    await new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .toFormat(format.toLowerCase())
+        .on('error', reject)
+        .on('end', resolve)
+        .save(outputPath);
+    });
+
+    const outputBuffer = await fs.readFile(outputPath);
+    const originalName = path.parse(req.file.originalname).name;
+
+    res.set({
+      'Content-Type': `audio/${format.toLowerCase()}`,
+      'Content-Disposition': `attachment; filename="${originalName}.${format.toLowerCase()}"`,
+      'Content-Length': outputBuffer.length,
+    });
+
+    res.send(outputBuffer);
+  } catch (error) {
+    console.error('Audio conversion error:', error);
+    res.status(500).json({ error: 'Failed to convert audio. Make sure ffmpeg is installed on the server.' });
+  } finally {
+    if (inputPath) fs.unlink(inputPath).catch(() => {});
+    if (outputPath) fs.unlink(outputPath).catch(() => {});
+  }
+}
+
+// Video conversion
+export async function convertVideo(req, res) {
+  let inputPath = null;
+  let outputPath = null;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    const { format } = req.body;
+    const allowedFormats = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv'];
+
+    if (!format || !allowedFormats.includes(format.toLowerCase())) {
+      return res.status(400).json({ error: `Invalid format. Allowed: ${allowedFormats.join(', ')}` });
+    }
+
+    const tmpDir = os.tmpdir();
+    const ext = path.extname(req.file.originalname) || '.video';
+    inputPath = path.join(tmpDir, `video_in_${Date.now()}${ext}`);
+    outputPath = path.join(tmpDir, `video_out_${Date.now()}.${format.toLowerCase()}`);
+
+    await fs.writeFile(inputPath, req.file.buffer);
+
+    await new Promise((resolve, reject) => {
+      let cmd = ffmpeg(inputPath).toFormat(format.toLowerCase());
+
+      // Format-specific codec settings
+      if (format.toLowerCase() === 'mp4') {
+        cmd = cmd.videoCodec('libx264').audioCodec('aac');
+      } else if (format.toLowerCase() === 'webm') {
+        cmd = cmd.videoCodec('libvpx-vp9').audioCodec('libopus');
+      } else if (format.toLowerCase() === 'avi') {
+        cmd = cmd.videoCodec('mpeg4').audioCodec('mp3');
+      }
+
+      cmd.on('error', reject).on('end', resolve).save(outputPath);
+    });
+
+    const outputBuffer = await fs.readFile(outputPath);
+    const originalName = path.parse(req.file.originalname).name;
+
+    const mimeTypes = {
+      mp4: 'video/mp4', avi: 'video/x-msvideo', mov: 'video/quicktime',
+      mkv: 'video/x-matroska', webm: 'video/webm', flv: 'video/x-flv',
+    };
+
+    res.set({
+      'Content-Type': mimeTypes[format.toLowerCase()] || 'video/mp4',
+      'Content-Disposition': `attachment; filename="${originalName}.${format.toLowerCase()}"`,
+      'Content-Length': outputBuffer.length,
+    });
+
+    res.send(outputBuffer);
+  } catch (error) {
+    console.error('Video conversion error:', error);
+    res.status(500).json({ error: 'Failed to convert video. Make sure ffmpeg is installed on the server.' });
+  } finally {
+    if (inputPath) fs.unlink(inputPath).catch(() => {});
+    if (outputPath) fs.unlink(outputPath).catch(() => {});
+  }
+}

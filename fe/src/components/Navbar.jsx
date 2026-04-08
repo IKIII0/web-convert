@@ -30,6 +30,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
     { id: 'image', label: t('nav.image') },
     { id: 'pdf', label: t('nav.pdf') },
     { id: 'document', label: t('nav.document') },
+    { id: 'audio', label: t('nav.audio') },
+    { id: 'video', label: t('nav.video') },
     { id: 'unit', label: t('nav.unit') },
     { id: 'color', label: t('nav.color') },
   ];
@@ -80,7 +82,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
               <span style={{ color: 'white', fontWeight: 900, fontSize: '1.25rem' }}>C</span>
             </div>
             <span style={{ fontSize: '1.5rem', fontWeight: 800, background: 'linear-gradient(135deg, #F97316, #C2410C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              ConvertHub
+              Convertmee
             </span>
           </div>
 
