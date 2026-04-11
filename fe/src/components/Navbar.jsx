@@ -27,6 +27,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
   }, []);
 
   const tabs = [
+    { id: 'video-to-audio', label: t('nav.videoToAudio') },
     { id: 'image', label: t('nav.image') },
     { id: 'pdf', label: t('nav.pdf') },
     { id: 'document', label: t('nav.document') },

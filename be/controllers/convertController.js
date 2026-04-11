@@ -356,6 +356,79 @@ export async function convertAudio(req, res) {
   }
 }
 
+// Video to Audio extraction
+export async function convertVideoToAudio(req, res) {
+  let inputPath = null;
+  let outputPath = null;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    const { format } = req.body;
+    const allowedFormats = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
+
+    if (!format || !allowedFormats.includes(format.toLowerCase())) {
+      return res.status(400).json({ error: `Invalid format. Allowed: ${allowedFormats.join(', ')}` });
+    }
+
+    const tmpDir = os.tmpdir();
+    const ext = path.extname(req.file.originalname) || '.video';
+    inputPath = path.join(tmpDir, `v2a_in_${Date.now()}${ext}`);
+    outputPath = path.join(tmpDir, `v2a_out_${Date.now()}.${format.toLowerCase()}`);
+
+    await fs.writeFile(inputPath, req.file.buffer);
+
+    await new Promise((resolve, reject) => {
+      let cmd = ffmpeg(inputPath)
+        .noVideo()           // strip video stream entirely
+        .toFormat(format.toLowerCase());
+
+      // Codec-specific quality settings
+      if (format.toLowerCase() === 'mp3') {
+        cmd = cmd.audioCodec('libmp3lame').audioBitrate('192k');
+      } else if (format.toLowerCase() === 'aac') {
+        cmd = cmd.audioCodec('aac').audioBitrate('192k');
+      } else if (format.toLowerCase() === 'm4a') {
+        cmd = cmd.audioCodec('aac').audioBitrate('192k').outputOptions(['-movflags', '+faststart']);
+      } else if (format.toLowerCase() === 'ogg') {
+        cmd = cmd.audioCodec('libvorbis');
+      } else if (format.toLowerCase() === 'flac') {
+        cmd = cmd.audioCodec('flac');
+      }
+
+      cmd.on('error', reject).on('end', resolve).save(outputPath);
+    });
+
+    const outputBuffer = await fs.readFile(outputPath);
+    const originalName = path.parse(req.file.originalname).name;
+
+    const mimeTypes = {
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      flac: 'audio/flac',
+      aac: 'audio/aac',
+      m4a: 'audio/mp4',
+    };
+
+    res.set({
+      'Content-Type': mimeTypes[format.toLowerCase()] || 'audio/mpeg',
+      'Content-Disposition': `attachment; filename="${originalName}.${format.toLowerCase()}"`,
+      'Content-Length': outputBuffer.length,
+    });
+
+    res.send(outputBuffer);
+  } catch (error) {
+    console.error('Video to audio error:', error);
+    res.status(500).json({ error: 'Failed to extract audio from video. Make sure ffmpeg is installed on the server.' });
+  } finally {
+    if (inputPath) fs.unlink(inputPath).catch(() => {});
+    if (outputPath) fs.unlink(outputPath).catch(() => {});
+  }
+}
+
 // Video conversion
 export async function convertVideo(req, res) {
   let inputPath = null;

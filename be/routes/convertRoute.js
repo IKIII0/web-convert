@@ -11,6 +11,7 @@ import {
   officeToPdf,
   convertAudio,
   convertVideo,
+  convertVideoToAudio,
 } from '../controllers/convertController.js';
 
 const router = Router();
@@ -42,5 +43,8 @@ router.post('/audio', upload.single('file'), convertAudio);
 
 // Video conversion
 router.post('/video', upload.single('file'), convertVideo);
+
+// Video to Audio extraction
+router.post('/video-to-audio', upload.single('file'), convertVideoToAudio);
 
 export default router;

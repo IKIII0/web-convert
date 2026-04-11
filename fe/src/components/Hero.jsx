@@ -6,6 +6,20 @@ export default function Hero({ setActiveTab }) {
 
   const features = [
     {
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+          <rect x="2" y="8" width="28" height="20" rx="3" fill="#F97316" opacity="0.85" />
+          <polygon points="30,12 40,18 30,24" fill="#EA580C" />
+          <path d="M8 38 Q24 28 40 38" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <circle cx="40" cy="38" r="5" fill="#F97316" />
+        </svg>
+      ),
+      title: t('hero.videoToAudio'),
+      desc: t('hero.videoToAudioDesc'),
+      tab: 'video-to-audio',
+      featured: true,
+    },
+    {
       icon: <HiOutlinePhotograph className="w-7 h-7" />,
       title: t('hero.imageConverter'),
       desc: t('hero.imageConverterDesc'),
@@ -72,7 +86,7 @@ export default function Hero({ setActiveTab }) {
       {/* CTA Buttons */}
       <div className="animate-fade-in-up" style={{ animationDelay: '0.5s', opacity: 0, marginTop: '2.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem' }}>
         <button
-          onClick={() => setActiveTab('image')}
+          onClick={() => setActiveTab('video-to-audio')}
           className="btn-gradient animate-pulse-orange"
           style={{ fontSize: '1.1rem', padding: '1rem 2rem', borderRadius: '1rem' }}
         >
@@ -116,15 +130,37 @@ export default function Hero({ setActiveTab }) {
             <div
               key={f.tab}
               className="glass-card animate-fade-in-up"
-              style={{ animationDelay: `${0.6 + i * 0.1}s`, opacity: 0, padding: '1.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
+              style={{
+                animationDelay: `${0.6 + i * 0.1}s`, opacity: 0,
+                padding: '1.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                ...(f.featured ? {
+                  background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 50%, #FEF3C7 100%)',
+                  border: '2px solid #FB923C',
+                  boxShadow: '0 8px 32px rgba(249,115,22,0.18)',
+                  gridColumn: 'span 1',
+                } : {}),
+              }}
               onClick={() => setActiveTab(f.tab)}
             >
-              <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '1rem', background: 'linear-gradient(135deg, #FFF7ED, #FFEDD5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F97316', marginBottom: '1rem', transition: 'transform 0.3s ease', flexShrink: 0 }}>
+              {f.featured && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                    background: 'linear-gradient(135deg, #F97316, #EA580C)',
+                    color: 'white', fontSize: '0.65rem', fontWeight: 800,
+                    padding: '0.2rem 0.6rem', borderRadius: '2rem',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}>
+                    ⭐ {t('v2a.badge')}
+                  </span>
+                </div>
+              )}
+              <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '1rem', background: f.featured ? 'linear-gradient(135deg, #F97316, #EA580C)' : 'linear-gradient(135deg, #FFF7ED, #FFEDD5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: f.featured ? 'white' : '#F97316', marginBottom: '1rem', transition: 'transform 0.3s ease', flexShrink: 0 }}>
                 {f.icon}
               </div>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1F2937', marginBottom: '0.5rem' }}>{f.title}</h3>
               <p style={{ fontSize: '0.875rem', color: '#6B7280', lineHeight: 1.6, flex: 1 }}>{f.desc}</p>
-              <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#F97316', fontSize: '0.875rem', fontWeight: 600 }}>
+              <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: f.featured ? '#EA580C' : '#F97316', fontSize: '0.875rem', fontWeight: 600 }}>
                 {t('hero.openTool')}
                 <span style={{ transition: 'transform 0.3s ease' }}>→</span>
               </div>

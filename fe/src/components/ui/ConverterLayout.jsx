@@ -20,6 +20,41 @@ export default function ConverterLayout({ icon, title, subtitle, children }) {
       <div className="glass-card" style={{ padding: 'clamp(1.25rem, 3vw, 2rem)' }}>
         {children}
       </div>
+
+      {/* ── Ad Banner ── */}
+      <div style={{
+        marginTop: '1.75rem',
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '728px',
+          height: '90px',
+          borderRadius: '0.875rem',
+          border: '2px dashed #FDBA74',
+          background: 'rgba(255,255,255,0.6)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          overflow: 'hidden',
+        }}>
+          {/* 🔁 Replace this block with your ad code, e.g. Google AdSense */}
+          <span style={{
+            fontSize: '0.7rem',
+            color: '#D1D5DB',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+            userSelect: 'none',
+          }}>
+            Advertisement · 728 × 90
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
