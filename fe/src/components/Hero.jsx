@@ -8,10 +8,17 @@ export default function Hero({ setActiveTab }) {
     {
       icon: (
         <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
-          <rect x="2" y="8" width="28" height="20" rx="3" fill="#F97316" opacity="0.85" />
-          <polygon points="30,12 40,18 30,24" fill="#EA580C" />
-          <path d="M8 38 Q24 28 40 38" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <circle cx="40" cy="38" r="5" fill="#F97316" />
+          {/* Video screen — white */}
+          <rect x="2" y="8" width="26" height="18" rx="3" fill="white" opacity="0.95" />
+          {/* Play triangle — orange accent */}
+          <polygon points="9,13 9,21 16,17" fill="#F97316" />
+          {/* Camera body */}
+          <rect x="28" y="12" width="2" height="8" rx="1" fill="rgba(255,255,255,0.7)" />
+          <polygon points="30,13 38,17 30,21" fill="rgba(255,255,255,0.7)" />
+          {/* Wave/audio arc — white */}
+          <path d="M8 34 Q24 26 40 34" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          {/* Music dot — white */}
+          <circle cx="40" cy="34" r="3.5" fill="white" />
         </svg>
       ),
       title: t('hero.videoToAudio'),
